@@ -22,7 +22,7 @@ jobs:
         with:
           repository: Idearca/atlory-mobile
           ref: codex/ios-free-local-build-20261103
-          token: ${{ secrets.ATLORY_READ_TOKEN }}
+          token: \${{ secrets.ATLORY_READ_TOKEN }}
           path: atlory-mobile
           persist-credentials: false
 
@@ -45,7 +45,7 @@ jobs:
       - name: Pull the Expo development environment
         working-directory: atlory-mobile
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
         run: |
           eas env:pull --environment development --non-interactive --path .env.local > "$RUNNER_TEMP/eas-env.log" 2>&1 || {
             echo "::error::Expo environment setup failed. Check the Expo account and project."
@@ -55,17 +55,60 @@ jobs:
       - name: Build a signed iPhone IPA locally
         working-directory: atlory-mobile
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
         run: |
           eas build --platform ios --profile device-test --local --non-interactive --output "$RUNNER_TEMP/Atlory-device-test.ipa" > "$RUNNER_TEMP/eas-build.log" 2>&1 || {
-            echo "::error::The iOS build failed. Detailed output is suppressed from this public workflow."
+            python3 - "$RUNNER_TEMP/eas-build.log" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          log = pathlib.Path(sys.argv[1]).read_text(errors="replace").lower()
+          categories = [
+              ("Apple signing or provisioning", [
+                  r"no provisioning profile", r"provisioning profile.*(missing|not found|doesn't include)",
+                  r"code signing.*(error|required|failed)", r"certificate.*(expired|not found|invalid)",
+                  r"errsec", r"distribution certificate.*(missing|expired|invalid)"
+              ]),
+              ("CocoaPods dependency installation", [
+                  r"could not find compatible versions for pod", r"pod install.*(failed|error)",
+                  r"\[!\].*(pod|cocoapods)", r"cocoapods.*(failed|error)"
+              ]),
+              ("Expo app configuration", [
+                  r"failed to load app config", r"config plugin.*(error|failed)",
+                  r"failed to resolve plugin", r"expo doctor.*(error|failed)"
+              ]),
+              ("JavaScript bundling", [
+                  r"unable to resolve module", r"metro.*(error|failed)",
+                  r"javascript bundl.*(error|failed)", r"bundle javascript.*(error|failed)"
+              ]),
+              ("Xcode native compilation", [
+                  r"xcodebuild.*(non-zero|exit code|failed)", r"\*\* build failed \*\*",
+                  r"error:.*(swift|clang|no such module|building for ios)"
+              ]),
+              ("Runner toolchain", [
+                  r"command not found", r"xcode-select.*(error|failed)",
+                  r"requires xcode", r"unsupported xcode", r"no such file or directory"
+              ]),
+          ]
+          for label, patterns in categories:
+              if any(re.search(pattern, log) for pattern in patterns):
+                  print(f"::error::Build failure category: {label}. Full logs stay private.")
+                  break
+          else:
+              codes = re.findall(r"\bERR_[A-Z0-9_]{2,80}\b", log)
+              if codes:
+                  print(f"::error::EAS build failed with code {codes[-1]}. Full logs stay private.")
+              else:
+                  print("::error::EAS local build failed; no safe diagnostic category was recognized. Full logs stay private.")
+          PY
             exit 1
           }
 
       - name: Upload the IPA to the Expo project
         working-directory: atlory-mobile
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
