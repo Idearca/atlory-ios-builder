@@ -79,7 +79,7 @@ jobs:
           EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
           TMPDIR: ${{ runner.temp }}
         run: |
-          eas build --platform ios --profile production --local --non-interactive --output "$RUNNER_TEMP/Atlory-testflight.ipa" > "$RUNNER_TEMP/eas-build.log" 2>&1 || {
+          eas build --platform ios --profile production --local --non-interactive --verbose-logs --output "$RUNNER_TEMP/Atlory-testflight.ipa" > "$RUNNER_TEMP/eas-build.log" 2>&1 || {
             python3 - "$RUNNER_TEMP/eas-build.log" <<'PY'
           import os
           import pathlib
@@ -164,9 +164,11 @@ jobs:
           priority_patterns = [
               r"(?i)failed to write file", r"(?i)permission denied",
               r"(?i)hermes-compiler", r"(?i)unable to resolve module",
+              r"(?i)syntaxerror|referenceerror|typeerror",
+              r"(?i)metro.*(error|failed)", r"(?i)javascript bundl.*(error|failed)",
+              r"(?i)bundle javascript.*(error|failed)",
               r"(?i)unknown error.*bundle javascript",
-              r"(?i)bundle javascript.*(failed|error)",
-              r"(?i)pod install.*(failed|error)", r"(?i)\[!\].*(pod|cocoapods)"
+              r"(?i)^error:|^\s*error:|^.*exception:"
           ]
           for pattern in priority_patterns:
               for raw_line in raw_log.splitlines():
