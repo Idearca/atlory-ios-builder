@@ -22,7 +22,7 @@ jobs:
         with:
           repository: Idearca/atlory-mobile
           ref: codex/ios-free-local-build-20261103
-          token: \${{ secrets.ATLORY_READ_TOKEN }}
+          token: ${{ secrets.ATLORY_READ_TOKEN }}
           path: atlory-mobile
           persist-credentials: false
 
@@ -42,10 +42,10 @@ jobs:
             exit 1
           }
 
-      - name: Pull the Expo development environment
+      - name: Pull the Expo production environment
         working-directory: atlory-mobile
         env:
-          EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           eas env:pull --environment production --non-interactive --path .env.local > "$RUNNER_TEMP/eas-env.log" 2>&1 || {
             echo "::error::Expo environment setup failed. Check the Expo account and project."
@@ -55,7 +55,7 @@ jobs:
       - name: Build a signed iPhone IPA locally
         working-directory: atlory-mobile
         env:
-          EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           eas build --platform ios --profile production --local --non-interactive --output "$RUNNER_TEMP/Atlory-testflight.ipa" > "$RUNNER_TEMP/eas-build.log" 2>&1 || {
             python3 - "$RUNNER_TEMP/eas-build.log" <<'PY'
@@ -108,7 +108,7 @@ jobs:
       - name: Submit iOS app to TestFlight
         working-directory: atlory-mobile
         env:
-          EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
