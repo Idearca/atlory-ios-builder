@@ -47,7 +47,7 @@ jobs:
         env:
           EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
         run: |
-          eas env:pull --environment development --non-interactive --path .env.local > "$RUNNER_TEMP/eas-env.log" 2>&1 || {
+          eas env:pull --environment production --non-interactive --path .env.local > "$RUNNER_TEMP/eas-env.log" 2>&1 || {
             echo "::error::Expo environment setup failed. Check the Expo account and project."
             exit 1
           }
@@ -57,7 +57,7 @@ jobs:
         env:
           EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
         run: |
-          eas build --platform ios --profile device-test --local --non-interactive --output "$RUNNER_TEMP/Atlory-device-test.ipa" > "$RUNNER_TEMP/eas-build.log" 2>&1 || {
+          eas build --platform ios --profile production --local --non-interactive --output "$RUNNER_TEMP/Atlory-testflight.ipa" > "$RUNNER_TEMP/eas-build.log" 2>&1 || {
             python3 - "$RUNNER_TEMP/eas-build.log" <<'PY'
           import pathlib
           import re
@@ -105,23 +105,44 @@ jobs:
             exit 1
           }
 
-      - name: Upload the IPA to the Expo project
+      - name: Submit iOS app to TestFlight
         working-directory: atlory-mobile
         env:
           EXPO_TOKEN: \${{ secrets.EXPO_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          upload_json="$RUNNER_TEMP/eas-upload.json"
-          eas upload --platform ios --build-path "$RUNNER_TEMP/Atlory-device-test.ipa" --non-interactive --json > "$upload_json" 2> "$RUNNER_TEMP/eas-upload.log" || {
-            echo "::error::Expo upload failed. Check the Expo project dashboard."
+          eas submit --platform ios --profile production --path "$RUNNER_TEMP/Atlory-testflight.ipa" --non-interactive --wait > "$RUNNER_TEMP/eas-submit.log" 2>&1 || {
+            python3 - "$RUNNER_TEMP/eas-submit.log" <<'PY'
+          import pathlib
+          import re
+          import sys
+
+          log = pathlib.Path(sys.argv[1]).read_text(errors="replace").lower()
+          categories = [
+              ("App Store Connect credentials or app access", [
+                  r"app store connect.*(api key|credential|permission|access)",
+                  r"asc.*(api key|credential|permission|access)",
+                  r"no.*(api key|credential).*app store connect",
+                  r"not authorized.*app"
+              ]),
+              ("IPA signing or App Store validation", [
+                  r"invalid binary", r"invalid provisioning profile", r"code signature.*(invalid|error)",
+                  r"bundle identifier.*(does not match|invalid)"
+              ]),
+              ("Expo submission service", [
+                  r"submission.*(failed|error)", r"eas submit.*(failed|error)",
+                  r"network.*(error|failed|timeout)"
+              ]),
+          ]
+          for label, patterns in categories:
+              if any(re.search(pattern, log) for pattern in patterns):
+                  print(f"::error::TestFlight submission failure category: {label}. Full logs stay private.")
+                  break
+          else:
+              print("::error::TestFlight submission failed; no safe diagnostic category was recognized. Full logs stay private.")
+          PY
             exit 1
           }
-          install_url="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["url"])' "$upload_json")"
-          if [[ "$install_url" != https://* ]]; then
-            echo "::error::Expo did not return a valid build page."
-            exit 1
-          fi
-          printf '::add-mask::%s\n' "$install_url"
-          rm -f "$upload_json" "$RUNNER_TEMP/Atlory-device-test.ipa"
-          echo "IPA uploaded to the Expo project. Its share link is hidden from this public workflow; download it from the authenticated Expo account."
+          rm -f "$RUNNER_TEMP/Atlory-testflight.ipa"
+          echo "iOS build submitted to App Store Connect for TestFlight processing."
