@@ -52,6 +52,13 @@ jobs:
             exit 1
           }
 
+      - name: Report native build toolchain versions
+        run: |
+          xcodebuild -version
+          ruby --version
+          pod --version
+          uname -m
+
       - name: Build a signed iPhone IPA locally
         working-directory: atlory-mobile
         env:
@@ -95,9 +102,7 @@ jobs:
                 r"invalid podfile", r"no podspec found", r"unable to find a target named",
                 r"target .* does not exist", r"could not find method"
               ]),
-              ("CocoaPods dependency installation", [
-                r"pod install.*(failed|error)", r"\[!\].*(pod|cocoapods)", r"cocoapods.*(failed|error)"
-              ]),
+
               ("Expo app configuration", [
                   r"failed to load app config", r"config plugin.*(error|failed)",
                   r"failed to resolve plugin", r"expo doctor.*(error|failed)"
@@ -113,6 +118,9 @@ jobs:
               ("Runner toolchain", [
                   r"command not found", r"xcode-select.*(error|failed)",
                   r"requires xcode", r"unsupported xcode", r"no such file or directory"
+              ]),
+              ("CocoaPods dependency installation", [
+                r"pod install.*(failed|error)", r"\[!\].*(pod|cocoapods)", r"cocoapods.*(failed|error)"
               ]),
           ]
           for label, patterns in categories:
