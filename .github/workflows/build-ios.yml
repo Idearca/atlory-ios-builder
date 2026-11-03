@@ -166,7 +166,7 @@ jobs:
               r"(?i)hermes-compiler", r"(?i)unable to resolve module",
               r"(?i)unknown error.*bundle javascript",
               r"(?i)bundle javascript.*(failed|error)",
-              r"(?i)pod install.*(failed|error)", r"(?i)\\[!\\].*(pod|cocoapods)"
+              r"(?i)pod install.*(failed|error)", r"(?i)\[!\].*(pod|cocoapods)"
           ]
           for pattern in priority_patterns:
               for raw_line in raw_log.splitlines():
@@ -175,15 +175,15 @@ jobs:
                   line = raw_line
                   for secret in secret_values:
                       line = line.replace(secret, "[REDACTED]")
-                  line = re.sub(r"(?i)(authorization\\s*[:=]\\s*bearer\\s+|bearer\\s+)[A-Za-z0-9._~+/=-]+", r"\\1[REDACTED]", line)
-                  line = re.sub(r"(?i)\\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{5,}\\.[A-Za-z0-9_-]{5,})\\b", "[REDACTED]", line)
-                  line = re.sub(r"\\b[A-Fa-f0-9]{32,}\\b", "[REDACTED]", line)
-                  line = re.sub(r"\\b[A-Za-z0-9_+/=-]{48,}\\b", "[REDACTED]", line)
-                  line = re.sub(r"(?i)\\b(?:[A-Z0-9_]*TOKEN|[A-Z0-9_]*SECRET|[A-Z0-9_]*PASSWORD|[A-Z0-9_]*PRIVATE_KEY|[A-Z0-9_]*API_KEY|SUPABASE_[A-Z0-9_]*|DATABASE_URL)\\s*[:=]\\s*\\S+", "[REDACTED]", line)
-                  line = re.sub(r"https?://[^\\s)\\]\\\"']+", "[URL]", line)
-                  line = re.sub(r"(?i)(?:/Users/|/var/folders/|/private/var/|/tmp/|/opt/homebrew/)\\S+", "[PATH]", line)
-                  line = re.sub(r"atlory-mobile/\\S+", "atlory-mobile/[PATH]", line)
-                  line = line[:320].replace("%", "%25").replace("\\r", "%0D").replace("\\n", "%0A").replace("::", "%3A%3A")
+                  line = re.sub(r"(?i)(authorization\s*[:=]\s*bearer\s+|bearer\s+)[A-Za-z0-9._~+/=-]+", r"\1[REDACTED]", line)
+                  line = re.sub(r"(?i)\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,})\b", "[REDACTED]", line)
+                  line = re.sub(r"\b[A-Fa-f0-9]{32,}\b", "[REDACTED]", line)
+                  line = re.sub(r"\b[A-Za-z0-9_+/=-]{48,}\b", "[REDACTED]", line)
+                  line = re.sub(r"(?i)\b(?:[A-Z0-9_]*TOKEN|[A-Z0-9_]*SECRET|[A-Z0-9_]*PASSWORD|[A-Z0-9_]*PRIVATE_KEY|[A-Z0-9_]*API_KEY|SUPABASE_[A-Z0-9_]*|DATABASE_URL)\s*[:=]\s*\S+", "[REDACTED]", line)
+                  line = re.sub(r"https?://\S+", "[URL]", line)
+                  line = re.sub(r"(?i)(?:/Users/|/var/folders/|/private/var/|/tmp/|/opt/homebrew/)\S+", "[PATH]", line)
+                  line = re.sub(r"atlory-mobile/\S+", "atlory-mobile/[PATH]", line)
+                  line = line[:320].replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A").replace("::", "%3A%3A")
                   if line not in error_lines:
                       error_lines.append(line)
                   if len(error_lines) == 5:
