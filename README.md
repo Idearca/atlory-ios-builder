@@ -1,4 +1,4 @@
-# Atlory iOS device build
+# Atlory mobile build resources
 
 この公開リポジトリには手動ビルド用ワークフローと、iOS/Androidの無料ビルド手順だけを置いています。AtloryのソースやIPAはGitHubの公開ファイル・Actions artifactに置きません。ワークフローは非公開の `Idearca/atlory-mobile` から指定ブランチを一時取得し、GitHubのmacOS runner上でローカルビルドしたIPAをExpoプロジェクトへアップロードします。共有リンクは公開ログに出さない設定です。runner上で非公開ソースを実行するため、リスクをゼロにはできません。
 
